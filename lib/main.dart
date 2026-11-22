@@ -2698,6 +2698,7 @@ class _ZooMapScreenState extends State<ZooMapScreen> {
                 WildlifeCollectionScreen(
                   animals: eligibleAnimals,
                   profile: _gamificationProfile,
+                  informationService: _animalInformationService,
                   onOpenAnimal: (animal) => _openAnimalCard(animal),
                   onShowOnMap: _focusAnimalOnMap,
                 ),

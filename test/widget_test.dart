@@ -43,8 +43,18 @@ void main() {
       await tester.pumpWidget(const ZooMapApp(startIn3dMode: false));
       await _pumpUi(tester);
 
-      expect(find.text('Locate Me'), findsOneWidget);
       expect(find.text('Search the zoo'), findsOneWidget);
+
+      await tester.tap(find.text('Map'));
+      await _pumpUi(tester);
+      expect(
+        find.text('Locate Me').evaluate().length +
+            find.text('Tracking').evaluate().length +
+            find.text('Locating...').evaluate().length,
+        1,
+      );
+      await tester.tap(find.text('Explore'));
+      await _pumpUi(tester);
 
       await _openSearch(tester);
       await tester.tap(find.widgetWithText(FilterChip, 'Facilities'));

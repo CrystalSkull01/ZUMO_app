@@ -100,9 +100,9 @@ class AnimalDiscoveryCardScreen extends StatelessWidget {
             ],
             if (showReward) ...[
               const SizedBox(height: 8),
-              const _Notice(
+              _Notice(
                 icon: Icons.celebration_rounded,
-                text: 'New discovery saved to your wildlife journal.',
+                text: 'New Animal Discovered! +${discovery?.xpAwarded ?? 0} XP',
                 emphasized: true,
               ),
             ],

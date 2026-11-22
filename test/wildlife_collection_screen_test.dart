@@ -25,7 +25,7 @@ void main() {
     category: 'animal',
   );
 
-  testWidgets('collection shows progress, verification status and map action', (
+  testWidgets('collection shows progress, unlocks and map action', (
     WidgetTester tester,
   ) async {
     final profile = GamificationProfile.empty().record(
@@ -49,21 +49,29 @@ void main() {
       ),
     );
 
-    expect(find.text('1 of 2 explored'), findsOneWidget);
+    expect(find.text('1 / 2'), findsOneWidget);
     expect(find.text('100 XP'), findsOneWidget);
+    expect(find.text('LOCKED'), findsOneWidget);
+    expect(find.text('UNLOCKED'), findsOneWidget);
     expect(find.textContaining('Name not verified'), findsNWidgets(2));
     expect(
       find.textContaining('Name retained from the recorded waypoint.'),
       findsOneWidget,
     );
-    await tester.tap(find.text('Open journal card'));
+    await tester.tap(find.text('Ostrich'));
     expect(opened?.id, ostrich.id);
-    await tester.tap(find.widgetWithText(TextButton, 'Show on map').first);
+
+    opened = null;
+    await tester.tap(find.text('Explore the zoo to unlock this animal!'));
+    expect(opened, isNull);
+    expect(find.byIcon(Icons.lock_rounded), findsWidgets);
+
+    await tester.tap(find.byTooltip('Show habitat on map').first);
     expect(mapped?.id, ostrich.id);
 
     await tester.tap(find.widgetWithText(FilterChip, 'Undiscovered'));
-    await tester.pump();
-    expect(find.text('Crowned Crane'), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(find.text('Mystery animal'), findsOneWidget);
     expect(find.text('Ostrich'), findsNothing);
   });
 
