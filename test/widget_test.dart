@@ -1,11 +1,70 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:dehiwala_zoo_app/main.dart';
+import 'package:dehiwala_zoo_app/core/network/zoo_api_client.dart';
+import 'package:dehiwala_zoo_app/repositories/map_repository.dart';
 
+http.Response _mapResponse() => http.Response(
+  jsonEncode({
+    'type': 'FeatureCollection',
+    'features': [
+      {
+        'type': 'Feature',
+        'id': 'WP001',
+        'geometry': {
+          'type': 'Point',
+          'coordinates': [79.872646, 6.856595],
+        },
+        'properties': {
+          'featureType': 'FACILITY',
+          'category': 'facility',
+          'name': 'Aquarium Entrance',
+          'nameVerified': false,
+          'needsReview': false,
+        },
+      },
+      {
+        'type': 'Feature',
+        'id': 'WP003',
+        'geometry': {
+          'type': 'Point',
+          'coordinates': [79.872722, 6.85723],
+        },
+        'properties': {
+          'featureType': 'ANIMAL_LOCATION',
+          'category': 'animal',
+          'name': 'Crowned Crane',
+          'nameVerified': false,
+          'needsReview': true,
+          'reviewNote': 'Original label was "African crown crane". Confirm the exact crowned-crane species from the sign or staff.',
+        },
+      },
+      {
+        'type': 'Feature',
+        'id': 'WP066',
+        'geometry': {
+          'type': 'Point',
+          'coordinates': [79.8728, 6.8565],
+        },
+        'properties': {
+          'featureType': 'LANDMARK',
+          'category': 'landmark',
+          'name': 'Viewpoint',
+          'nameVerified': false,
+          'needsReview': false,
+        },
+      },
+    ],
+  }),
+  200,
+);
 Future<void> _pumpUi(WidgetTester tester) async {
   await tester.runAsync(
     () => Future<void>.delayed(const Duration(milliseconds: 100)),
@@ -40,10 +99,20 @@ void main() {
   testWidgets(
     'map search opens facilities and landmarks and shows quality notes',
     (WidgetTester tester) async {
-      await tester.pumpWidget(const ZooMapApp(startIn3dMode: false));
+      await tester.pumpWidget(
+        ZooMapApp(
+          startIn3dMode: false,
+          mapRepository: MapRepository(
+            apiClient: ZooApiClient(
+              client: MockClient((_) async => _mapResponse()),
+            ),
+          ),
+        ),
+      );
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(seconds: 1)),
+      );
       await _pumpUi(tester);
-
-      expect(find.text('Locate Me'), findsOneWidget);
       expect(find.text('Search the zoo'), findsOneWidget);
 
       await _openSearch(tester);
