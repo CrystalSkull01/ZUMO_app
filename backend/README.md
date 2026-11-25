@@ -77,3 +77,5 @@ map_feature.geometry stores SRID 4326 spatial data and is GIST-indexed. A check 
 - Optional map bounds use minLon, minLat, maxLon, maxLat together. The API validates coordinate ranges and returns HTTP 400 for incomplete or invalid bounds.
 
 CORS origins are configured through APP_CORS_ALLOWED_ORIGINS; the local default covers localhost:5500 and 127.0.0.1:5500. Set the deployed web origin for production.
+
+- GET /api/v1/animals returns only records whose animal verification status is VERIFIED. An optional query parameter searches verified common names. Unverified map labels remain available through the map features API only.
