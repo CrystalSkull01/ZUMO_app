@@ -1,45 +1,42 @@
-# Dehiwala Zoo backend foundation
+# Dehiwala Zoo backend
 
-This is the first backend increment. It adds a Spring Boot REST service, a PostGIS-backed PostgreSQL service, and the initial Flyway schema. No Flutter client switch or source data import has happened yet.
+The backend is a Spring Boot REST API backed by PostgreSQL/PostGIS. Flyway owns the schema. This increment adds safe, repeatable import of the existing map assets and a read-only GeoJSON endpoint. The Flutter app still uses its existing local data until API integration has been tested.
 
-## Data safety and import policy
+## Data safety
 
-The Flutter source files remain the migration backups:
+The source files remain unchanged:
 - ../assets/data/waypoints_flutter.json
 - ../assets/data/recorded_route.geojson
 
-All current waypoint names are unverified. The schema keeps review and verification state separate from animal records. Unverified animal-category waypoints should be imported as ANIMAL_LOCATION map features with no animal_id; an animal row and discovery eligibility are created only after the zoo confirms the identity and association.
+The importer preserves waypoint IDs and the original waypoint JSON in feature properties. It sets the map feature status from the existing verification/review flags. The current animal-category entries are map observations without animal records or discovery eligibility until zoo staff verifies the identity and enclosure association.
 
-The two recorded GeoJSON traces remain RECORDED_ROUTE, with their source metadata and UNVERIFIED status. They are not inserted into the official zoo_path table and are not represented as official visitor routes.
+Recorded traces are imported as RECORDED_ROUTE features, retaining their source properties, with UNVERIFIED status and needs_review set. They are not inserted into zoo_path and are not represented as official paths.
 
-## Start locally
+Imports use ON CONFLICT upserts on the existing source IDs. The importer validates coordinate ranges and runs in one database transaction.
 
-1. Install Docker Desktop and ensure its engine is running.
-2. Copy .env.example to .env in this directory and replace the placeholder password with a local development value.
-3. Keep the two password values equal for this local Compose setup.
-4. Run docker compose -f compose.yaml up --build.
-5. Check http://localhost:8080/api/v1/health.
+## Start the services
 
-Flyway applies V1__initial_schema.sql when the API connects. Database credentials are supplied through environment variables; do not commit .env.
+1. Ensure Docker Desktop is running.
+2. Copy .env.example to .env. Replace both password placeholders with the same local development password.
+3. Run docker compose -f compose.yaml up --build.
+4. Check GET http://localhost:8080/api/v1/health.
 
-## Initial schema
+The database data uses a named Docker volume. Do not commit the local .env file.
 
-- zoo_map and map_version scope imported feature sets and support future map revisions.
-- map_feature stores point, line, and polygon geometries in SRID 4326 with source, review, verification, and JSON metadata.
-- animal and species store confirmed wildlife information; animal_image and animal_information_verification attach sourced content.
-- facility adds type and visitor-facing details to a map feature.
-- zoo_path is reserved for approved paths. It is inactive and unverified by default.
-- app_user, animal_discovery, visitor_progress, and badge tables prepare the relational model for server-owned progress. Authentication and endpoints are introduced in a later increment.
+## Import existing map assets
 
-## Environment
+With Maven installed, start the API from the backend directory after the database container is running. Set:
 
-| Variable | Purpose |
-|---|---|
-| POSTGRES_DB | Local database name |
-| POSTGRES_USER | Local database role |
-| POSTGRES_PASSWORD | Local database password |
-| SPRING_DATASOURCE_URL | API connection URL |
-| SPRING_DATASOURCE_USERNAME | API database account |
-| SPRING_DATASOURCE_PASSWORD | API database password |
+- APP_LEGACY_IMPORT_ENABLED=true
+- APP_LEGACY_IMPORT_DATA_DIR=../assets/data
+- SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/dehiwala_zoo
+- SPRING_DATASOURCE_USERNAME=dehiwala_app
+- SPRING_DATASOURCE_PASSWORD=the local password from .env
 
-Only GET /api/v1/health is exposed in this increment. Administrative and visitor endpoints will be added behind authorization as their API and validation rules are implemented.
+The importer is disabled by default. Enabling it imports both source files; running it again updates the same IDs.
+
+## Map API
+
+GET /api/v1/map/features returns an active GeoJSON FeatureCollection with original properties and verification/source metadata. Optional viewport filters are minLon, minLat, maxLon, and maxLat; all four must be supplied, with valid longitude/latitude ranges.
+
+No write, admin, authentication, event, announcement, or discovery endpoints are exposed yet. These require the next security and feature increments.
