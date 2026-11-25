@@ -1,6 +1,6 @@
 # Dehiwala Zoo backend
 
-The backend is a Spring Boot REST API backed by PostgreSQL/PostGIS. Flyway owns the schema. This increment adds safe, repeatable import of the existing map assets and a read-only GeoJSON endpoint. The Flutter app still uses its existing local data until API integration has been tested.
+The backend is a Spring Boot REST API backed by PostgreSQL/PostGIS. Flyway owns the schema. This increment adds safe, repeatable import of the existing map assets and a read-only GeoJSON endpoint. The Flutter map requests backend features first and falls back to the bundled JSON and GeoJSON if the API is unavailable or has no imported records. Authentication, server-side discoveries, and admin workflows are later increments.
 
 ## Data safety
 
@@ -25,7 +25,7 @@ The database data uses a named Docker volume. Do not commit the local .env file.
 
 ## Import existing map assets
 
-With Maven installed, start the API from the backend directory after the database container is running. Set:
+After the database container is running, open a terminal in backend and set:
 
 - APP_LEGACY_IMPORT_ENABLED=true
 - APP_LEGACY_IMPORT_DATA_DIR=../assets/data
@@ -33,7 +33,7 @@ With Maven installed, start the API from the backend directory after the databas
 - SPRING_DATASOURCE_USERNAME=dehiwala_app
 - SPRING_DATASOURCE_PASSWORD=the local password from .env
 
-The importer is disabled by default. Enabling it imports both source files; running it again updates the same IDs.
+With those variables set, run .\mvnw.cmd spring-boot:run. The importer is disabled by default. Enabling it imports both source files; running it again updates the same IDs.
 
 ## Map API
 
@@ -79,3 +79,11 @@ map_feature.geometry stores SRID 4326 spatial data and is GIST-indexed. A check 
 CORS origins are configured through APP_CORS_ALLOWED_ORIGINS; the local default covers localhost:5500 and 127.0.0.1:5500. Set the deployed web origin for production.
 
 - GET /api/v1/animals returns only records whose animal verification status is VERIFIED. An optional query parameter searches verified common names. Unverified map labels remain available through the map features API only.
+## Build without installing Maven globally
+
+The checked-in Maven Wrapper pins Maven 3.9.9. From the backend directory run:
+
+- .\mvnw.cmd test
+- .\mvnw.cmd spring-boot:run
+
+The first wrapper run downloads Maven and project dependencies.
