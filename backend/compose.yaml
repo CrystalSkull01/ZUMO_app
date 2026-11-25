@@ -1,0 +1,28 @@
+services:
+  db:
+    image: postgis/postgis:17-3.5
+    env_file: .env
+    environment:
+      POSTGRES_DB: dehiwala_zoo
+      POSTGRES_USER: dehiwala_app
+    ports:
+      - "5432:5432"
+    volumes:
+      - dehiwala-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dehiwala_app -d dehiwala_zoo"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build: .
+    env_file: .env
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  dehiwala-postgres-data:
