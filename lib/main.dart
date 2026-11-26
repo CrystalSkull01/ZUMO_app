@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
@@ -15,6 +14,8 @@ import 'package:maplibre_gl/maplibre_gl.dart' as maplibre;
 import 'models/gamification_profile.dart';
 import 'models/exploration_session.dart';
 import 'models/zoo_waypoint.dart';
+import 'models/zoo_map_data.dart';
+import 'repositories/map_repository.dart';
 import 'screens/animal_discovery_card_screen.dart';
 import 'screens/animal_directory_screen.dart';
 import 'screens/wildlife_collection_screen.dart';
@@ -33,9 +34,10 @@ void main() {
 }
 
 class ZooMapApp extends StatefulWidget {
-  const ZooMapApp({super.key, this.startIn3dMode = true});
+  const ZooMapApp({super.key, this.startIn3dMode = true, this.mapRepository});
 
   final bool startIn3dMode;
+  final MapRepository? mapRepository;
 
   @override
   State<ZooMapApp> createState() => _ZooMapAppState();
@@ -95,6 +97,7 @@ class _ZooMapAppState extends State<ZooMapApp> {
         startIn3dMode: widget.startIn3dMode,
         isDarkMode: _themeMode == ThemeMode.dark,
         onToggleTheme: _toggleTheme,
+        mapRepository: widget.mapRepository,
       ),
     );
   }
@@ -105,10 +108,12 @@ class ZooMapScreen extends StatefulWidget {
     super.key,
     this.startIn3dMode = true,
     this.isDarkMode = false,
+    this.mapRepository,
     this.onToggleTheme,
   });
 
   final bool startIn3dMode;
+  final MapRepository? mapRepository;
   final bool isDarkMode;
   final VoidCallback? onToggleTheme;
 
@@ -118,6 +123,7 @@ class ZooMapScreen extends StatefulWidget {
 
 class _ZooMapScreenState extends State<ZooMapScreen> {
   late final Future<ZooMapData> _mapDataFuture;
+  late final MapRepository _mapRepository;
 
   // Controls the position and zoom of the map.
   final MapController _mapController = MapController();
@@ -262,6 +268,7 @@ class _ZooMapScreenState extends State<ZooMapScreen> {
   void initState() {
     super.initState();
     _is3dMode = widget.startIn3dMode && _supports3dMap;
+    _mapRepository = widget.mapRepository ?? MapRepository();
     _gamificationService = GamificationService(
       storage: const FileGamificationStorageService(),
       locationProvider: const GeolocatorDiscoveryLocationProvider(),
@@ -605,6 +612,7 @@ class _ZooMapScreenState extends State<ZooMapScreen> {
       ..removeListener(_onSearchChanged)
       ..dispose();
     _visibleWaypoints.removeListener(_onVisibleWaypointsChanged);
+    _mapRepository.dispose();
     _visibleWaypoints.dispose();
     _flutterMapZoom.dispose();
     _mapCompassBearing.dispose();
@@ -1780,54 +1788,7 @@ class _ZooMapScreenState extends State<ZooMapScreen> {
   }
 
   // Load animal/facility waypoints and the recorded GPS route.
-  Future<ZooMapData> _loadMapData() async {
-    final files = await Future.wait([
-      rootBundle.loadString('assets/data/waypoints_flutter.json'),
-      rootBundle.loadString('assets/data/recorded_route.geojson'),
-    ]);
-
-    // Load the named locations.
-    final waypointJson = jsonDecode(files[0]) as List<dynamic>;
-
-    final waypoints = waypointJson.map((item) {
-      return ZooWaypoint.fromJson(Map<String, dynamic>.from(item as Map));
-    }).toList();
-
-    // Load the recorded GPS route.
-    final routeJson = jsonDecode(files[1]) as Map<String, dynamic>;
-
-    final features = routeJson['features'] as List<dynamic>;
-    final routes = <List<LatLng>>[];
-
-    for (final feature in features) {
-      final featureMap = Map<String, dynamic>.from(feature as Map);
-
-      final geometry = Map<String, dynamic>.from(featureMap['geometry'] as Map);
-
-      if (geometry['type'] != 'LineString') {
-        continue;
-      }
-
-      final coordinates = geometry['coordinates'] as List<dynamic>;
-
-      final points = coordinates.map((coordinate) {
-        final values = coordinate as List<dynamic>;
-
-        // GeoJSON stores longitude first, latitude second.
-        return LatLng(
-          (values[1] as num).toDouble(),
-          (values[0] as num).toDouble(),
-        );
-      }).toList();
-
-      // Keep separate route segments separate.
-      if (points.length >= 2) {
-        routes.add(points);
-      }
-    }
-
-    return ZooMapData(waypoints: waypoints, routes: routes);
-  }
+  Future<ZooMapData> _loadMapData() async => _mapRepository.loadMapData();
 
   // Get the phone's current location when the visitor requests it.
   Future<void> _locateMe({bool followUser = true}) async {
@@ -3623,11 +3584,4 @@ class ZooMapPinPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant ZooMapPinPainter oldDelegate) =>
       oldDelegate.category != category;
-}
-
-class ZooMapData {
-  final List<ZooWaypoint> waypoints;
-  final List<List<LatLng>> routes;
-
-  const ZooMapData({required this.waypoints, required this.routes});
 }
