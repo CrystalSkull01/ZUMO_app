@@ -1,6 +1,7 @@
 services:
   db:
     image: postgis/postgis:17-3.5
+    restart: unless-stopped
     env_file: .env
     environment:
       POSTGRES_DB: dehiwala_zoo
@@ -17,6 +18,7 @@ services:
 
   api:
     build: .
+    restart: unless-stopped
     env_file: .env
     ports:
       - "8080:8080"
